@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { marked } from 'marked';
 
   // --- state --------------------------------------------------------------
   let messages = $state<{ role: string; content: string }[]>([]);
@@ -11,6 +12,17 @@
   let apiKey: string = '';
   let model = $state('gpt-4o-mini');     // default fallback
   let endpoint: string = '/api/chat/completions'; // relative to current host by default
+
+  // Configure marked for secure rendering
+  marked.setOptions({
+    breaks: true,
+    gfm: true
+  });
+
+  // Function to safely render markdown
+  function renderMarkdown(content: string): string {
+    return marked.parse(content) as string;
+  }
 
   // --- initialize from query‑string --------------------------------------
   onMount(() => {
@@ -204,6 +216,115 @@
     animation: slideIn 0.3s ease-out;
   }
 
+  /* Markdown content styling - :global() to avoid unused selector warnings */
+  :global(.markdown-content h1),
+  :global(.markdown-content h2),
+  :global(.markdown-content h3),
+  :global(.markdown-content h4),
+  :global(.markdown-content h5),
+  :global(.markdown-content h6) {
+    font-weight: 600;
+    margin: 1em 0 0.5em 0;
+    line-height: 1.4;
+  }
+
+  :global(.markdown-content h1) { font-size: 1.25rem; }
+  :global(.markdown-content h2) { font-size: 1.125rem; }
+  :global(.markdown-content h3) { font-size: 1rem; }
+  :global(.markdown-content h4) { font-size: 0.9rem; }
+  :global(.markdown-content h5) { font-size: 0.875rem; }
+  :global(.markdown-content h6) { font-size: 0.875rem; font-weight: 500; }
+
+  :global(.markdown-content p) {
+    margin: 0.5em 0;
+  }
+
+  :global(.markdown-content strong) {
+    font-weight: 600;
+  }
+
+  :global(.markdown-content em) {
+    font-style: italic;
+  }
+
+  :global(.markdown-content code) {
+    background: #f6f8fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 3px;
+    padding: 0.125em 0.25em;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.8125rem;
+    color: #24292e;
+  }
+
+  :global(.markdown-content pre) {
+    background: #f6f8fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 0.75em 0;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+
+  :global(.markdown-content pre code) {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.8125rem;
+  }
+
+  :global(.markdown-content blockquote) {
+    border-left: 4px solid #e1e4e8;
+    padding-left: 1rem;
+    margin: 0.75em 0;
+    color: #656d76;
+    font-style: italic;
+  }
+
+  :global(.markdown-content ul),
+  :global(.markdown-content ol) {
+    margin: 0.5em 0;
+    padding-left: 1.5rem;
+  }
+
+  :global(.markdown-content li) {
+    margin: 0.25em 0;
+  }
+
+  :global(.markdown-content a) {
+    color: #10a37f;
+    text-decoration: underline;
+  }
+
+  :global(.markdown-content a:hover) {
+    color: #0d8f6b;
+  }
+
+  :global(.markdown-content hr) {
+    border: none;
+    border-top: 1px solid #e1e4e8;
+    margin: 1.5em 0;
+  }
+
+  :global(.markdown-content table) {
+    border-collapse: collapse;
+    margin: 0.75em 0;
+    width: 100%;
+  }
+
+  :global(.markdown-content th),
+  :global(.markdown-content td) {
+    border: 1px solid #e1e4e8;
+    padding: 0.375rem 0.75rem;
+    text-align: left;
+  }
+
+  :global(.markdown-content th) {
+    background: #f6f8fa;
+    font-weight: 600;
+  }
+
   .loading-dots {
     display: flex;
     gap: 3px;
@@ -355,8 +476,8 @@
             </svg>
           {/if}
         </div>
-        <div class="message">
-          {message.content}
+        <div class="message markdown-content">
+          {@html renderMarkdown(message.content)}
         </div>
       </div>
     {/each}
