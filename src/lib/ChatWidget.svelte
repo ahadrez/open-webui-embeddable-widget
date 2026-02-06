@@ -12,6 +12,7 @@
   let apiKey: string = '';
   let model = $state('gpt-4o-mini');     // default fallback
   let endpoint: string = '/api/chat/completions'; // relative to current host by default
+  let toolIds: string[] = [];            // Open WebUI tool IDs (e.g. MCP servers)
 
   // Configure marked for secure rendering
   marked.setOptions({
@@ -33,12 +34,14 @@
       const qsModel = qs.get('model');
       const qsEndpoint = qs.get('endpoint');
 
+      const qsToolIds = qs.get('tool_ids');
+
       if (qsApiKey !== null) apiKey = qsApiKey;
       if (qsModel !== null) model = qsModel;
       if (qsEndpoint !== null) endpoint = qsEndpoint;
-      // Default values are already set if query params are null
+      if (qsToolIds !== null) toolIds = qsToolIds.split(',').filter(Boolean);
 
-      console.log('Query parameters processed:', { apiKey, model, endpoint });
+      console.log('Query parameters processed:', { apiKey, model, endpoint, toolIds });
     } catch (e) {
       console.error('Error processing query parameters in onMount:', e);
     }
@@ -72,7 +75,8 @@
         },
         body: JSON.stringify({
           model,
-          messages: [{ role: 'user', content: text }]
+          messages: [{ role: 'user', content: text }],
+          ...(toolIds.length > 0 && { tool_ids: toolIds })
         })
       });
       const data = await res.json();
