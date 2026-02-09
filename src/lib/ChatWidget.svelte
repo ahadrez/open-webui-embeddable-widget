@@ -76,12 +76,59 @@
         body: JSON.stringify({
           model,
           messages: [{ role: 'user', content: text }],
+          stream: true,
           ...(toolIds.length > 0 && { tool_ids: toolIds })
         })
       });
-      const data = await res.json();
-      const reply = data?.choices?.[0]?.message?.content ?? '⚠️ Error retrieving response';
-      messages = [...messages, { role: 'assistant', content: reply }];
+
+      if (!res.ok) {
+        messages = [...messages, { role: 'assistant', content: '⚠️ Error retrieving response' }];
+        return;
+      }
+
+      // Stream the response
+      const reader = res.body?.getReader();
+      if (!reader) {
+        messages = [...messages, { role: 'assistant', content: '⚠️ Error retrieving response' }];
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let assistantContent = '';
+      messages = [...messages, { role: 'assistant', content: '' }];
+      isLoading = false; // hide loading dots, show streaming text
+
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed?.choices?.[0]?.delta?.content;
+            if (delta) {
+              assistantContent += delta;
+              messages = [...messages.slice(0, -1), { role: 'assistant', content: assistantContent }];
+            }
+          } catch {
+            // skip non-JSON lines (e.g. sources/tool results)
+          }
+        }
+      }
+
+      // If nothing was streamed, show error
+      if (!assistantContent) {
+        messages = [...messages.slice(0, -1), { role: 'assistant', content: '⚠️ Error retrieving response' }];
+      }
     } catch (err) {
       messages = [...messages, { role: 'assistant', content: '⚠️ Network error' }];
     } finally {
