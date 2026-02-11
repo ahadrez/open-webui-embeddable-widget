@@ -14,6 +14,13 @@
   let endpoint: string = '/api/chat/completions';
   let toolIds: string[] = [];
   let title = $state('');
+  let prompts = $state<string[]>([]);
+
+  const defaultPrompts = [
+    'What is the cost of running an e2-medium VM in me-central2?',
+    'Estimate monthly cost for Cloud SQL in me-central2',
+    'What GCP services are available in me-central2?'
+  ];
 
   // Configure marked for secure rendering
   marked.setOptions({ breaks: true, gfm: true });
@@ -35,6 +42,7 @@
       if (qs.get('endpoint') !== null) endpoint = qs.get('endpoint')!;
       if (qs.get('tool_ids') !== null) toolIds = qs.get('tool_ids')!.split(',').filter(Boolean);
       if (qs.get('title') !== null) title = qs.get('title')!;
+      if (qs.get('prompts') !== null) prompts = qs.get('prompts')!.split('|').filter(Boolean);
     } catch (e) {
       console.error('Error processing query parameters:', e);
     }
@@ -607,15 +615,11 @@
       <h2 class="welcome-title">How can I help?</h2>
       <p class="welcome-subtitle">Ask questions about GCP costs, pricing, and service availability across regions.</p>
       <div class="suggested-prompts">
-        <button class="prompt-btn" onclick={() => sendPrompt('What is the cost of running an e2-medium VM in me-central2?')}>
-          What is the cost of running an e2-medium VM in me-central2?
-        </button>
-        <button class="prompt-btn" onclick={() => sendPrompt('Estimate monthly cost for Cloud SQL in us-central1')}>
-          Estimate monthly cost for Cloud SQL in us-central1
-        </button>
-        <button class="prompt-btn" onclick={() => sendPrompt('Compare GKE pricing across regions')}>
-          Compare GKE pricing across regions
-        </button>
+        {#each prompts.length > 0 ? prompts : defaultPrompts as prompt}
+          <button class="prompt-btn" onclick={() => sendPrompt(prompt)}>
+            {prompt}
+          </button>
+        {/each}
       </div>
     </div>
   {:else}
